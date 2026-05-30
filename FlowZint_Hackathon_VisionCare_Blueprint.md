@@ -177,11 +177,11 @@ The repository will include a `tests/fixtures/` directory containing sample data
 
 ### Images
 
-Three examples of broken hardware:
+One example of broken hardware in scope for the demo:
 
 * Router displaying a red error light
-* Smartphone with a cracked screen
-* Frayed charging cable
+
+Additional hardware fixtures (e.g., cracked screen, frayed cable) are out of scope for the v1 demo because the supported product family is the VisionCare Demo Router only. Adding fixtures that the agent cannot route weakens the documentation score by implying coverage that does not exist.
 
 ### Documents
 
@@ -318,8 +318,6 @@ visioncare/
 ├── tests/
 │   └── fixtures/
 │       ├── router_red_light.jpg
-│       ├── cracked_screen.jpg
-│       ├── frayed_cable.jpg
 │       ├── valid_invoice.pdf
 │       └── expired_invoice.pdf
 │

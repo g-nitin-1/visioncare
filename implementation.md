@@ -691,11 +691,11 @@ Make the demo repeatable and detect regressions before presentation.
 
 ```text
 tests/fixtures/router_red_light.jpg
-tests/fixtures/cracked_screen.jpg
-tests/fixtures/frayed_cable.jpg
 tests/fixtures/valid_invoice.pdf
 tests/fixtures/expired_invoice.pdf
 ```
+
+Only fixtures referenced by the test matrix below are listed. Do not commit unused image fixtures; they enlarge the repo and weaken the documentation score by implying coverage that does not exist.
 
 2. Create `tests/test_end_to_end.py`.
 

@@ -1,0 +1,5 @@
+streamlit
+duckdb
+filelock
+python-dotenv
+pytest
