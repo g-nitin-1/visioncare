@@ -12,6 +12,7 @@ Current state:
 - Phase 7 Streamlit user view is complete.
 - Phase 8 Streamlit admin dashboard is complete.
 - Phase 9 evaluation fixtures and end-to-end tests are complete.
+- Phase 10 documentation and demo readiness is complete.
 
 Corrections made:
 - README architecture now points to backend/model_gateway.py.
@@ -58,13 +59,24 @@ Validation notes:
 - SHA-256 checks confirmed router_red_light.jpg, both invoice PDFs, and backend/mock_db.json were unchanged across repeated full-suite runs.
 - Opt-in live provider check passed on 2026-06-10: pytest -q -m live (1 passed, 87 deselected).
 - Python 3.12 compile validation passed after Phase 9.
+- Phase 10 reset/rehearsal targeted tests passed: pytest -q tests/test_reset_demo.py tests/test_demo_rehearsal.py (7 passed).
+- Created a clean .venv with Python 3.12 and installed only requirements.txt.
+- Clean-environment dependency validation passed: pip check reported no broken requirements.
+- Generated requirements.lock.txt with 52 exact direct and transitive package versions from the clean Python 3.12 environment.
+- Full clean-environment suite passed after Phase 10: 94 passed, 1 deselected.
+- Final clean-environment live provider check passed: 1 passed, 94 deselected.
+- The real deterministic rehearsal completed in 7.64 seconds and produced RMA-0001 plus one session, one warranty claim, and one open RMA.
+- The populated Streamlit dashboard showed one active user, 100% resolution, one warranty claim, one open RMA, and zero escalations.
+- Headless Streamlit startup after Phase 10 passed; /_stcore/health returned ok.
+- Final reset restored backend/mock_db.json byte-for-byte from the seed, removed runtime telemetry, and returned all dashboard metrics to zero.
+- Repository hygiene checks confirmed .env, .venv, caches, lock files, and runtime telemetry are ignored and no API key patterns exist in project sources.
 
 Phase 1 completed:
 - Added backend/mock_db.json with one supported router, one valid warranty serial, and one expired warranty serial.
 - Added backend/tools.py with warranty lookup, idempotent RMA creation, and idempotent human escalation.
 - RMA and escalation mutations use FileLock plus atomic file replacement.
 - RMA creation intentionally does not check warranty state; the Phase 6 agent must check warranty before calling the RMA tool and refuse expired warranties.
-- Live demo runs against backend/mock_db.json will mutate the tracked seed; Phase 10 reset_demo.py must restore the seed before commits or demos.
+- Live demo runs against backend/mock_db.json mutate runtime state; scripts/reset_demo.py now restores the canonical seed before commits or demos.
 - Added tests/test_tools.py using temporary mock DB copies so the committed seed is not mutated.
 
 Phase 2 completed:
@@ -79,9 +91,9 @@ Phase 2 completed:
 - Switched logger validation to a real deep copy before adding generated event fields.
 - Added tests/test_logger.py and tests/test_analytics.py using temporary audit logs so the ignored runtime log is not touched.
 
-Future dependency note:
-- requirements.txt remains unpinned during early hackathon phases.
-- After Phase 5 provider integration, generate requirements.lock.txt with pip freeze for teammate reproducibility.
+Dependency reproducibility:
+- requirements.txt remains the short readable dependency list.
+- requirements.lock.txt contains the exact Python 3.12 environment used for final validation.
 
 Phase 3 completed:
 - Added data/manuals/manifest.json for the supported demo router.
@@ -176,5 +188,16 @@ Phase 9 completed:
 - Updated the existing live pytest smoke test to use tests/fixtures/router_red_light.jpg instead of a generated in-memory image.
 - The conceptual RMA-request scenario intentionally emits telemetry intent warranty_check so analytics counts the warranty-governed replacement path consistently.
 
-Next phase:
-- Phase 10: finish documentation, add demo reset tooling, and rehearse the presentation flow.
+Phase 10 completed:
+- Added backend/mock_db.seed.json as the canonical byte-for-byte demo database seed.
+- Added scripts/reset_demo.py with seed validation, file locking, atomic replacement, runtime telemetry removal, isolated path options, and idempotent behavior.
+- Added tests/test_reset_demo.py covering exact seed equality, corrupted-state restoration, telemetry removal, repeat resets, invalid seed rejection, and CLI execution.
+- Added scripts/rehearse_demo.py for a deterministic photo-to-troubleshooting-to-valid-warranty-to-RMA preflight with dashboard metric verification.
+- Added tests/test_demo_rehearsal.py proving the visible demo actions and repeated clean starts.
+- Expanded README.md with prerequisites, Tesseract setup, environment variables, locked installation, tests, reset/preflight commands, the exact five-minute walkthrough, privacy scope, limitations, and final readiness status.
+- Created and validated requirements.lock.txt from a clean Python 3.12 virtual environment.
+- Performed the real rehearsal against default demo paths, verified populated Streamlit metrics, launched the headless server, and reset the workspace afterward.
+
+Project status:
+- All implementation phases are complete.
+- The repository is ready for the hackathon demo.
