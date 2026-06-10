@@ -52,8 +52,7 @@ visioncare/
 │   └── __init__.py
 ├── data/
 │   ├── manuals/
-│   ├── invoices/
-│   └── audit_logs.jsonl
+│   └── invoices/
 ├── frontend/
 │   └── __init__.py
 └── tests/
@@ -88,12 +87,11 @@ MODEL_PROVIDER=openrouter
 MODEL_API_KEY=
 MODEL_BASE_URL=
 PRIMARY_MODEL=
-OCR_FALLBACK_MODEL=
 ```
 
 5. Add `.gitignore` entries for `.env`, Python caches, test caches, local virtual environments, and generated runtime files.
 
-6. Create an empty `data/audit_logs.jsonl`.
+6. Do not commit `data/audit_logs.jsonl`. It is ignored by git and is created at runtime by the telemetry logger or demo reset script.
 
 7. Add one smoke test to `tests/test_smoke.py`:
 
@@ -107,7 +105,7 @@ def test_project_bootstrapped():
 Run:
 
 ```bash
-python -m compileall .
+python3.12 -m compileall .
 pytest -q
 git status --short
 ```
@@ -161,10 +159,11 @@ escalate_to_human(priority_level, chat_history_summary, idempotency_key)
 4. Implement these rules:
 
 * Unknown serial numbers return a clear `not_found` result.
-* Expired warranties do not automatically create an RMA.
+* The RMA tool does not check warranty state. Warranty eligibility is enforced by the Phase 6 agent before it calls `initiate_rma_process`.
 * RMA and escalation writes use `filelock.FileLock`.
 * Persist updates by writing a temporary file and atomically replacing `mock_db.json`.
 * Repeated requests with the same `idempotency_key` return the existing RMA or escalation ticket.
+* Real demo runs against the default `backend/mock_db.json` will mutate that tracked seed file. Do not commit demo-mutated RMA or escalation records; Phase 10 adds a reset script to restore deterministic seed state.
 
 5. Create `tests/test_tools.py`. Run tool tests against a temporary copy of `mock_db.json` so the committed demo seed is not mutated.
 
@@ -244,7 +243,7 @@ resolution_time_sec
 * Total completed sessions.
 * Active users as distinct `anonymous_user_id` values within the selected dashboard time window.
 * Resolution rate.
-* Average resolution time.
+* Average handling time across all completed sessions, including unresolved or escalated sessions.
 * Issue category counts.
 * Sentiment counts.
 * Human escalation count.
@@ -268,7 +267,7 @@ Test at least:
 * Appending two events creates two valid JSONL rows.
 * Missing required fields are rejected.
 * Tool-call rows do not increase total session count.
-* Two session summaries produce the correct resolution rate.
+* Two session summaries produce the correct resolution rate and average handling time.
 * Repeated summaries for one opaque user count as one active user.
 * Escalated sessions increase the escalation count.
 * RMA sessions increase the open RMA count.
@@ -417,7 +416,7 @@ Test at least:
 * The PDF is converted into page images.
 * Synthetic email, phone number, name, and address fields are detected.
 * The sanitized OCR output no longer contains those values.
-* Product model, serial number, and purchase date remain available.
+* Product model, serial number, and purchase date remain available using normalized comparisons so tests tolerate OCR tokenizer differences.
 * The original invoice fixture is not modified.
 
 Perform one manual visual check by opening the sanitized invoice image and confirming that the expected regions are obscured.
@@ -425,6 +424,11 @@ Perform one manual visual check by opening the sanitized invoice image and confi
 ## Expected Outcome
 
 Synthetic invoices can be sanitized locally while preserving the product fields required for the warranty workflow.
+
+Limitations:
+
+* `verify_redaction` verifies that detected PII values stayed redacted; it is not an oracle for missed PII.
+* Address detection is scoped to the synthetic fixture format and one-line address fields.
 
 ---
 
@@ -462,6 +466,14 @@ respond_with_tools(messages, tools)
 7. Keep provider-specific request and response formats inside this module only.
 
 8. Create `tests/test_model_gateway.py`.
+
+9. After the real provider adapter and optional Phase 4 dependencies are installed, pin dependency versions for teammate reproducibility:
+
+```bash
+python -m pip freeze > requirements.lock.txt
+```
+
+Keep `requirements.txt` readable for the hackathon setup path, and use the lock file when exact environment reproduction matters.
 
 ## Test Completion
 
@@ -528,6 +540,7 @@ rma_id
 receive upload
 -> sanitize document locally when present
 -> analyze sanitized content
+-> extract model_number explicitly from image, text, or permitted OCR fields
 -> identify supported product
 -> load matching manual sections
 -> determine intent
@@ -543,10 +556,18 @@ receive upload
 * Diagnosis still unknown after two attempts.
 * Confidence below the configured threshold.
 
+Product identification contract:
+
+* Call `identify_product` with an extracted `model_number`; product name alone does not select a manual.
+* If the model returns only a product name or cannot read `VC-R1000`, ask the user for the model number instead of guessing.
+* Branch only on the exact loader statuses: `identified`, `loaded`, and `clarification_required`.
+
 5. Apply RMA policy:
 
 * Check warranty first.
 * Never open an RMA automatically for an expired warranty.
+* Enforce the warranty gate in the agent. `initiate_rma_process` only knows whether the product exists; it intentionally does not inspect warranty state.
+* Emit `intent: "warranty_check"` for warranty-related session summaries so analytics can count warranty flows predictably.
 * Use a stable idempotency key so retries do not duplicate RMAs.
 
 6. Create `tests/test_agent.py` using `FakeModelGateway`.
@@ -601,6 +622,10 @@ Expose the support workflow through a simple customer-facing interface.
 
 6. Wire the view into `app.py`.
 
+7. Catch `ModelGatewayError` at the UI boundary and show a concise retry or
+offline-mode message. Provider timeouts, rate limits, and unavailable free
+endpoints must not expose a raw traceback.
+
 ## Test Completion
 
 Run:
@@ -617,10 +642,14 @@ Manually verify:
 * The response shows warranty and troubleshooting results.
 * Re-clicking submit does not create a duplicate RMA.
 * An unsupported file displays a clear error.
+* A simulated provider timeout or rate-limit error displays a user-facing
+  message and leaves the page usable.
 
 ## Expected Outcome
 
-A judge can complete the router support flow from a browser without using the terminal.
+A judge can complete the router support flow from a browser without using the
+terminal, and provider failures degrade to a clear error instead of crashing
+the interface.
 
 ---
 
@@ -639,7 +668,7 @@ Show operational metrics from the JSONL event stream.
 * Total sessions.
 * Active users.
 * Resolution rate.
-* Average resolution time.
+* Average handling time.
 * Warranty claims.
 * Open RMAs.
 * Human escalations.
@@ -774,12 +803,15 @@ Upload
 * The backend is a local JSON mock, not a production database.
 * Privacy detection is designed for synthetic fixtures and requires stronger validation before production use.
 * Live model quality and latency depend on the selected provider.
+* Open RMA count means distinct RMA IDs referenced by completed session summaries; closing RMAs is out of scope for v1.
 
 4. Create a reset script that restores deterministic demo state:
 
 ```text
 scripts/reset_demo.py
 ```
+
+The reset script must restore `backend/mock_db.json` to its committed seed state, including empty `rmas` and `escalations`, because live demo runs mutate the default mock DB.
 
 5. Rehearse the demo in this order:
 

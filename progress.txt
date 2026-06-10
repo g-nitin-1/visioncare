@@ -1,0 +1,180 @@
+VisionCare Progress
+Date: 2026-06-10
+
+Current state:
+- Phase 0 bootstrap is complete.
+- Phase 1 mock backend tools are complete.
+- Phase 2 telemetry and DuckDB analytics are complete.
+- Phase 3 product manual loader is complete.
+- Phase 4 local privacy pipeline is complete.
+- Phase 5 model gateway is complete.
+- Phase 6 agent orchestration is complete.
+- Phase 7 Streamlit user view is complete.
+- Phase 8 Streamlit admin dashboard is complete.
+- Phase 9 evaluation fixtures and end-to-end tests are complete.
+
+Corrections made:
+- README architecture now points to backend/model_gateway.py.
+- README now states that Phase 0 runs only the Streamlit bootstrap shell.
+- README setup keeps secrets in a local .env file and runs tests through the virtual environment.
+- implementation.md Phase 0 validation now uses python3.12 instead of python.
+- implementation.md now treats data/audit_logs.jsonl as a runtime file, not a tracked Phase 0 scaffold file.
+- data/audit_logs.jsonl is treated as a runtime telemetry file and is now ignored by git.
+- The previously tracked empty audit log was removed from the repository.
+- Ran git rm --cached data/audit_logs.jsonl so the removal is staged for the next commit.
+- A local .env file was created from .env.example with blank API values.
+
+Validation notes:
+- python3.12 is available on this machine.
+- python3.12 compile validation passed.
+- pytest validation passed with the currently installed pytest command.
+- System python3.12 does not currently have pytest installed directly.
+- Full Python 3.12 pytest validation should be run after activating the project virtual environment and installing requirements.
+- Phase 1 targeted tests passed: pytest -q tests/test_tools.py.
+- Full test suite passed: pytest -q.
+- Phase 2 targeted tests passed: pytest -q tests/test_logger.py tests/test_analytics.py.
+- Phase 3 targeted tests passed: pytest -q tests/test_manual_loader.py.
+- Phase 4 targeted tests passed: pytest -q tests/test_privacy.py.
+- Phase 4 visual redaction check passed using /tmp/visioncare_sanitized_valid_invoice.png.
+- Phase 5 targeted tests passed: pytest -q tests/test_model_gateway.py.
+- Phase 5 normal test guard passed: pytest -q excludes live tests by default via pytest.ini addopts.
+- Phase 5 live smoke guard passed: pytest -q -m live tests/test_model_gateway.py skipped without MODEL_API_KEY.
+- Phase 5 live OpenRouter smoke test passed with the locally configured MODEL_API_KEY on 2026-06-10.
+- Updated the live-test availability guard to detect MODEL_API_KEY from either the shell environment or local .env, so pytest -q -m live works directly.
+- Phase 6 targeted tests passed: pytest -q tests/test_agent.py (11 passed).
+- Full test suite after Phase 6 passed: pytest -q (59 passed, 1 deselected).
+- Python 3.12 compile validation passed after Phase 6.
+- Phase 7 targeted tests passed: pytest -q tests/test_user_view.py (13 passed).
+- Full test suite after Phase 7 passed: pytest -q (72 passed, 1 deselected).
+- Python 3.12 compile validation passed after Phase 7.
+- Headless Streamlit startup passed on 2026-06-10; /_stcore/health returned ok.
+- Phase 8 targeted tests passed: pytest -q tests/test_admin_dashboard.py (8 passed).
+- Phase 2/7/8 integration tests passed: pytest -q tests/test_analytics.py tests/test_user_view.py tests/test_admin_dashboard.py (25 passed).
+- Full test suite after Phase 8 passed: pytest -q (80 passed, 1 deselected).
+- Python 3.12 compile validation passed after Phase 8.
+- Headless Streamlit startup after Phase 8 passed on 2026-06-10; /_stcore/health returned ok.
+- Phase 9 targeted tests passed: pytest -q tests/test_end_to_end.py (7 passed).
+- Full offline suite after Phase 9 passed twice: pytest -q (87 passed, 1 deselected).
+- SHA-256 checks confirmed router_red_light.jpg, both invoice PDFs, and backend/mock_db.json were unchanged across repeated full-suite runs.
+- Opt-in live provider check passed on 2026-06-10: pytest -q -m live (1 passed, 87 deselected).
+- Python 3.12 compile validation passed after Phase 9.
+
+Phase 1 completed:
+- Added backend/mock_db.json with one supported router, one valid warranty serial, and one expired warranty serial.
+- Added backend/tools.py with warranty lookup, idempotent RMA creation, and idempotent human escalation.
+- RMA and escalation mutations use FileLock plus atomic file replacement.
+- RMA creation intentionally does not check warranty state; the Phase 6 agent must check warranty before calling the RMA tool and refuse expired warranties.
+- Live demo runs against backend/mock_db.json will mutate the tracked seed; Phase 10 reset_demo.py must restore the seed before commits or demos.
+- Added tests/test_tools.py using temporary mock DB copies so the committed seed is not mutated.
+
+Phase 2 completed:
+- Added backend/logger.py with locked JSONL event appends, generated event IDs, generated UTC timestamps, event-type validation, and session-summary validation.
+- Added backend/logger.py helper make_anonymous_user_id for stable opaque dashboard user counts.
+- Logger rejects obvious personal identifier fields such as user_id, name, email, phone, and address.
+- Added backend/analytics.py with DuckDB metrics over session_summary rows only.
+- Metrics include completed sessions, active users, resolution rate, average handling time, issue categories, sentiment counts, escalations, warranty claims, and distinct open RMAs.
+- Clarified that average handling time is computed across all completed sessions, not resolved sessions only.
+- Documented the Phase 6 warranty intent contract: emit intent "warranty_check" for warranty-related summaries.
+- Documented the v1 RMA limitation: open RMA count means distinct RMA IDs referenced by completed summaries because there is no close-RMA workflow yet.
+- Switched logger validation to a real deep copy before adding generated event fields.
+- Added tests/test_logger.py and tests/test_analytics.py using temporary audit logs so the ignored runtime log is not touched.
+
+Future dependency note:
+- requirements.txt remains unpinned during early hackathon phases.
+- After Phase 5 provider integration, generate requirements.lock.txt with pip freeze for teammate reproducibility.
+
+Phase 3 completed:
+- Added data/manuals/manifest.json for the supported demo router.
+- Added data/manuals/router_troubleshooting.md with red-light, power-cycle, cable-check, factory-reset, and escalation sections.
+- Added backend/manual_loader.py with exact normalized model-number matching and deterministic section scoring.
+- Product-name-only matching is intentionally disabled; Phase 6 must extract model_number and ask for clarification when it is unavailable.
+- Manual keyword aliases and reset gating are intentionally tuned for the single demo router manual and require review if manuals/products change.
+- Unknown products return clarification_required instead of guessing.
+- Unrelated manual queries return no sections instead of dumping the full manual.
+- Added tests/test_manual_loader.py for product identification, clarification behavior, focused section retrieval, unrelated queries, and manifest validation.
+
+Phase 4 completed:
+- Added Phase 4 dependencies to requirements.txt: opencv-python-headless, pymupdf, and pytesseract.
+- Confirmed the local tesseract binary is available at /usr/bin/tesseract.
+- Added backend/privacy.py with PDF rasterization, OCR word boxes, regex/label-based PII detection, OpenCV redaction, redaction verification, product-field extraction, and a NER detector hook.
+- Added tests/fixtures/valid_invoice.pdf and tests/fixtures/expired_invoice.pdf as synthetic invoices.
+- Added tests/test_privacy.py covering rasterization, OCR word extraction, PII detection, redaction, sanitized OCR verification, retained product fields, expired invoice fields, and fixture immutability.
+- Privacy tests use normalized OCR comparisons to tolerate tokenizer differences across Tesseract versions.
+- Visual check confirmed the synthetic name, email, phone, and address are blacked out while product name, model number, purchase date, and serial number remain readable.
+- Redaction verification confirms detected values stayed redacted; it does not prove undiscovered PII is absent.
+- Address detection is tuned to the one-line synthetic fixture format.
+- Local OCR validation was run with Tesseract 4.1.1.
+- Privacy scope remains synthetic-fixture focused; real-world invoices need stronger OCR/NER validation before production use.
+
+Phase 5 completed:
+- Selected provider: OpenRouter.
+- Selected primary model: openrouter/free.
+- The free router dynamically selects an available free model; output, tool behavior, latency, and availability can vary between requests.
+- Documented google/gemma-4-31b-it:free as a pinned free multimodal option and MODEL_PROVIDER=fake as a fully offline rehearsal mode.
+- Free endpoints have stricter rate limits and availability is not guaranteed, so the fake gateway remains the reliable no-network demo fallback.
+- Live verification on 2026-06-10: the pinned Gemma endpoint returned HTTP 429 from its upstream provider, while openrouter/free passed the vision smoke test.
+- Switched .env.example and the local .env to MODEL_PROVIDER=fake as the deterministic demo-day default; OpenRouter remains an explicit live bonus path.
+- Documented that restrictive OpenRouter privacy settings can leave free routing with no eligible endpoint and must be checked before the demo.
+- Added a Phase 7 requirement to catch ModelGatewayError and show a user-facing provider failure instead of a raw Streamlit traceback.
+- Updated .env.example and local .env with MODEL_BASE_URL and PRIMARY_MODEL defaults.
+- Added requests to requirements.txt.
+- Added backend/model_gateway.py with ModelGateway protocol, OpenRouterModelGateway, FakeModelGateway, environment-based factory, image MIME validation, base64 image data URLs, provider timeout handling, missing-key handling, unsupported-file handling, and invalid-response handling.
+- Added pytest.ini with addopts = -m "not live" plus a live marker so provider smoke tests are opt-in even when MODEL_API_KEY is present.
+- Added tests/test_model_gateway.py with deterministic fake gateway tests, request-payload tests, timeout tests, invalid-response tests, unsupported-file tests, environment factory tests, and a skipped-by-default live smoke test.
+- Did not generate requirements.lock.txt from the current global interpreter because pip freeze reports 508 packages. Generate it from the project virtual environment after installing requirements.
+- Removed OCR_FALLBACK_MODEL from env templates because local Tesseract is the implemented OCR path and no model fallback is wired yet.
+
+Phase 6 completed:
+- Added backend/agent.py with AgentSessionState, SupportAgent, and a one-turn run_support_workflow convenience entry point.
+- Connected local document sanitization, sanitized model analysis, strict model-number product identification, focused manual loading, warranty checks, RMA creation, human escalation, and JSONL telemetry.
+- Local OCR product fields take precedence over model-extracted document fields, and failed redaction verification blocks document model calls.
+- The agent owns policy decisions; model output supplies observations but cannot bypass warranty eligibility or directly create an RMA.
+- Stable session-based idempotency keys prevent duplicate RMAs and escalation tickets.
+- Expired warranties never call initiate_rma_process and receive an out-of-warranty response with human-support options.
+- Escalation triggers cover highly negative sentiment, model confidence below the configured threshold, explicit human requests, and two failed diagnosis attempts.
+- Highly negative sentiment intentionally preempts automated warranty/RMA handling and routes the session to human support.
+- Product-name-only observations do not select a manual; the agent asks for the model number and escalates after the second failed attempt.
+- Privacy redaction applies to uploaded documents, not arbitrary product photos; incidental PII visible in a product image is out of scope for v1.
+- Text fallback serial parsing accepts the documented dashed or spaced fixture format, not separator-free serials.
+- Removed a no-op serial normalization replacement from backend/agent.py.
+- Tool telemetry excludes raw serial numbers, user identifiers, messages, and document contents.
+- Session summaries are appended once, only after a terminal outcome is known, so an open troubleshooting turn can continue without recording a premature result.
+- Added tests/test_agent.py with valid and expired warranty flows, RMA and escalation idempotency, strict product routing, low-confidence and highly-negative-sentiment escalation, privacy failure blocking, multi-turn summary behavior, and a real OCR/redaction integration test.
+
+Phase 7 completed:
+- Added frontend/user_view.py and replaced the bootstrap shell in app.py with the customer support view.
+- Added persistent SupportAgent, AgentSessionState, anonymous browser user reference, chat history, and new-session handling through st.session_state.
+- Added router image and synthetic PDF invoice uploaders with extension, MIME, magic-byte, empty-file, and explicit size validation.
+- Raw invoice pages are rasterized only into local variables for the current privacy comparison and are not copied into VisionCare session state or telemetry.
+- Sanitized RGB invoice pages returned by Phase 6 are retained for the redacted model-input preview.
+- Added an explicit troubleshooting outcome selector so the UI does not imply a failed repair or trigger replacement automation without user confirmation.
+- Added structured product, warranty, troubleshooting, RMA, escalation, and privacy-proof panels.
+- Added processing status and friendly ModelGatewayError handling with deterministic fake-mode guidance.
+- Failed provider and upload-processing attempts restore the pre-request AgentSessionState so retries do not duplicate chat turns.
+- Added tests/test_user_view.py for upload validation, safe provider messages, Streamlit startup, resolved workflow rendering, UI-level RMA idempotency, and provider-error recovery.
+- The Streamlit startup test explicitly forces MODEL_PROVIDER=fake so its provider notice assertion is independent of the developer's shell and local .env.
+
+Phase 8 completed:
+- Added frontend/admin_dashboard.py and added Customer support/Admin dashboard tabs in app.py.
+- Added seven KPI cards: total sessions, active users, resolution rate, average handling time, warranty claims, open RMAs, and human escalations.
+- Added sentiment and issue-category distribution charts with deterministic count ordering.
+- Added All time, Last 24 hours, and Last 7 days UTC windows using the existing analytics start_time/end_time contract.
+- Added an explicit Refresh metrics action and a timestamped active-window footer.
+- Empty or missing audit logs render zero metrics and explanatory empty-state text without exceptions.
+- Dashboard queries remain session-summary-only through backend/analytics.py, so tool-call rows do not inflate sessions or users.
+- The dashboard follows an injected SupportAgent log path in isolated tests and uses data/audit_logs.jsonl in normal runtime.
+- Added tests/test_admin_dashboard.py for time windows, deterministic chart rows, empty state, aggregate values, tool-call exclusion, escalation counts, refresh, and a real customer-workflow-to-dashboard integration.
+
+Phase 9 completed:
+- Added tests/fixtures/router_red_light.jpg, a synthetic 1448x1086 router photo with an exact VC-R1000 label and visible red status LED.
+- Kept the fixture set intentionally limited to the supported router image plus valid and expired synthetic invoices.
+- Added tests/test_end_to_end.py with the complete evaluation matrix: initial troubleshooting, valid warranty, eligible unresolved RMA, expired warranty refusal, and two-attempt escalation.
+- End-to-end invoice scenarios use the real Tesseract privacy pipeline and FakeModelGateway, not a sanitizer stub.
+- Added module-level fixture digest checks and repeated full-suite SHA-256 validation to prove committed fixtures and the mock DB are not mutated.
+- Pinned expected tool sequences, one-summary behavior, stable RMA/ticket IDs, and the exact warranty_check/human_escalation telemetry literals.
+- Added scripts/live_smoke.py as an opt-in cloud-provider check using only the committed router image; it refuses to run in fake mode.
+- Updated the existing live pytest smoke test to use tests/fixtures/router_red_light.jpg instead of a generated in-memory image.
+- The conceptual RMA-request scenario intentionally emits telemetry intent warranty_check so analytics counts the warranty-governed replacement path consistently.
+
+Next phase:
+- Phase 10: finish documentation, add demo reset tooling, and rehearse the presentation flow.

@@ -36,6 +36,7 @@ Thumbs.db
 
 # Generated runtime files
 *.log
+data/audit_logs.jsonl
 data/audit_logs.jsonl.lock
 backend/mock_db.json.lock
 backend/mock_db.json.tmp

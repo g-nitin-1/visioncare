@@ -1,17 +1,20 @@
-"""VisionCare entry point.
-
-Wires the Streamlit user view and admin dashboard. Concrete views are
-implemented starting in Phase 7; this file currently boots the app shell.
-"""
+"""VisionCare Streamlit entry point."""
 
 import streamlit as st
+
+from frontend.admin_dashboard import render_admin_dashboard
+from frontend.user_view import render_user_view
 
 
 def main() -> None:
     st.set_page_config(page_title="VisionCare", layout="wide")
     st.title("VisionCare")
-    st.caption("Multimodal customer support agent — bootstrap shell.")
-    st.info("UI is added in Phase 7. Backend phases are tested via pytest.")
+    st.caption("Privacy-first multimodal customer support for hardware.")
+    user_tab, admin_tab = st.tabs(["Customer support", "Admin dashboard"])
+    with user_tab:
+        render_user_view()
+    with admin_tab:
+        render_admin_dashboard()
 
 
 if __name__ == "__main__":

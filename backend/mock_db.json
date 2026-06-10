@@ -1,0 +1,25 @@
+{
+  "products": {
+    "router-demo-1000": {
+      "product_id": "router-demo-1000",
+      "product_name": "VisionCare Demo Router",
+      "model_number": "VC-R1000"
+    }
+  },
+  "warranties": {
+    "VC1000-VALID-001": {
+      "serial_number": "VC1000-VALID-001",
+      "product_id": "router-demo-1000",
+      "valid": true,
+      "expiration_date": "2027-03-15"
+    },
+    "VC1000-EXPIRED-001": {
+      "serial_number": "VC1000-EXPIRED-001",
+      "product_id": "router-demo-1000",
+      "valid": false,
+      "expiration_date": "2024-03-15"
+    }
+  },
+  "rmas": {},
+  "escalations": {}
+}

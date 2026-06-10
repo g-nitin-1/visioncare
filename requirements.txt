@@ -3,3 +3,7 @@ duckdb
 filelock
 python-dotenv
 pytest
+opencv-python-headless
+pymupdf
+pytesseract
+requests
